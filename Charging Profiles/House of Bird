@@ -19,13 +19,24 @@ import matplotlib.pyplot as plt
 random.seed(4)
 # print(random.randint(1, 10))  # Always prints the same number with seed 42
 
+
 # Define Vehicles
 class Vehicle:
     def __init__(self, battery_size_kWh, max_charging_rate_kW):
-        self.battery_size_kWh = battery_size_kWh
-        self.max_charging_rate_kW = max_charging_rate_kW
-        self.start_soc  = random.randint(5, 80) # Random initial state of charge between 20% and 80%
-        self.target_soc = random.randint(self.start_soc + 5, 100) # Random target state of charge between start_soc + 5% and 100%
+        # Vehicle Specifications
+        self.battery_size_kWh = battery_size_kWh # Define the vehicle battery size in kWh
+        self.max_charging_rate_kW = max_charging_rate_kW # Define the vehicle max charging rate in kW
+        self.start_soc = random.randint(10, 80)  # Random start SoC as an integer (10% to 80%)
+
+        # Timing
+        self.start_time = random.randint(6, 21) # Random start time between 6 AM and 12 PM
+        self.end_time = random.randint(self.start_time + 1, 23) # Random end time between start_time+1 and 23 (at least 1 hour plugged in)
+        self.duration_hours = self.end_time - self.start_time # Total Time Plugged In
+
+        energy_added = self.duration_hours * self.max_charging_rate_kW # Calculate maximum possible energy added (kWh)
+        # Calculate achievable target SoC (as percent, capped at 100)
+        possible_target_soc = min(self.start_soc + int((energy_added / self.battery_size_kWh) * 100), 100)
+        self.target_soc = possible_target_soc
         self.energy_needed_kWh = (self.target_soc - self.start_soc) / 100 * self.battery_size_kWh
 
 vehicles = {
@@ -36,20 +47,59 @@ vehicles = {
     "Chevrolet Bolt": Vehicle(65, 7.2),
     "Hyundai Kona Electric": Vehicle(64, 7.2),
     "Hyundai Ioniq 5": Vehicle(72.6, 11),
+    "Kia EV3": Vehicle(58, 7),
     "Kia EV6": Vehicle(77.4, 11),
     "VW ID.4": Vehicle(82, 11),
+    "Audi e-tron": Vehicle(95, 11),
+    "Volvo EX30": Vehicle(75, 11),
     "BMW i3": Vehicle(42.2, 7.4),
     "BMW i4": Vehicle(80.7, 11),
     "BMW iX": Vehicle(105, 11),
     "Porsche Taycan": Vehicle(93.4, 11),
     "Rivian R1T": Vehicle(135, 11),
     "Mercedes EQS": Vehicle(108, 11),
+    "Buzz": Vehicle(79, 11)
     }
 
 
 # Display Vehicle Information & the Energy Needed for Charging
+# Function to allocate available power among vehicles based on overlapping charging times
+
+# Improved allocation: accumulate energy added per hour for each vehicle
+def allocate_charging_power(vehicles_dict, total_power_kw=30):
+    vehicle_list = list(vehicles_dict.values())
+    # Initialize per-vehicle hourly energy and rate trackers
+    for v in vehicle_list:
+        v.hourly_charging_rates = []
+        v.energy_added = 0
+    for hour in range(6, 24):
+        plugged_in = [v for v in vehicle_list if v.start_time <= hour < v.end_time]
+        if plugged_in:
+            per_vehicle_power = total_power_kw / len(plugged_in)
+            for v in plugged_in:
+                actual_rate = min(per_vehicle_power, v.max_charging_rate_kW)
+                v.hourly_charging_rates.append(actual_rate)
+                v.energy_added += actual_rate # 1 hour interval
+        # Vehicles not plugged in get 0 for this hour
+        for v in vehicle_list:
+            if not (v.start_time <= hour < v.end_time):
+                v.hourly_charging_rates.append(0)
+    # After allocation, update achievable target SoC for each vehicle
+    for v in vehicle_list:
+        possible_target_soc = min(v.start_soc + int((v.energy_added / v.battery_size_kWh) * 100), 100)
+        v.target_soc = possible_target_soc
+        v.energy_needed_kWh = (v.target_soc - v.start_soc) / 100 * v.battery_size_kWh
+        # Average actual charging rate over plugged-in hours
+        if v.duration_hours > 0:
+            v.actual_charging_rate_kW = v.energy_added / v.duration_hours
+        else:
+            v.actual_charging_rate_kW = 0
+
+allocate_charging_power(vehicles)
+
+# Display Vehicle Information & the Energy Needed for Charging
 for i in vehicles:
     v = vehicles[i]
-    print(f"{i}: Battery Size = {v.battery_size_kWh} kWh, Max Charging Rate = {v.max_charging_rate_kW} kW, Start SoC = {v.start_soc:.0f}, Target SoC = {v.target_soc:.0f}, Energy Needed = {v.energy_needed_kWh:.2f} kWh")
+    print(f"{i}: Battery Size = {v.battery_size_kWh} kWh, Max Charging Rate = {v.max_charging_rate_kW} kW, Actual Charging Rate = {v.actual_charging_rate_kW:.2f} kW, Start SoC = {v.start_soc:.0f}, Target SoC = {v.target_soc:.0f}, Energy Needed = {v.energy_needed_kWh:.2f} kWh, Start Time = {v.start_time}:00, End Time = {v.end_time}:00")
 # Example Output:
 # Tesla Model 3: Battery Size = 75 kWh, Max Charging Rate = 11 kW, Start SoC = 64, Target SoC = 95, Energy Needed = 22.50 kWh
