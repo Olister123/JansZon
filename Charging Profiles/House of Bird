@@ -1,0 +1,55 @@
+# Author : Oliver Kis #
+# Date   : 19-Nov-2025 #
+# Info   : Charging Profiles for House of Bird #
+# Version: 1.0.0 #
+
+# This script sets up charging profiles for the House of Bird project.
+# It configures the necessary parameters for efficient energy management.
+# These necessary parameters include battery sizing, different vehicle types, charging rates, and charging amounts
+
+
+import pandas as pd
+import numpy as np
+import random 
+import os
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+
+# Creating Random Seed for Reproducibility
+random.seed(4)
+# print(random.randint(1, 10))  # Always prints the same number with seed 42
+
+# Define Vehicles
+class Vehicle:
+    def __init__(self, battery_size_kWh, max_charging_rate_kW):
+        self.battery_size_kWh = battery_size_kWh
+        self.max_charging_rate_kW = max_charging_rate_kW
+        self.start_soc  = random.randint(5, 80) # Random initial state of charge between 20% and 80%
+        self.target_soc = random.randint(self.start_soc + 5, 100) # Random target state of charge between start_soc + 5% and 100%
+        self.energy_needed_kWh = (self.target_soc - self.start_soc) / 100 * self.battery_size_kWh
+
+vehicles = {
+    "Tesla Model 3": Vehicle(75, 11),
+    "Tesla Model Y": Vehicle(75, 11),
+    "Tesla Model S Plaid": Vehicle(100, 11),
+    "Nissan Leaf": Vehicle(40, 6.6),
+    "Chevrolet Bolt": Vehicle(65, 7.2),
+    "Hyundai Kona Electric": Vehicle(64, 7.2),
+    "Hyundai Ioniq 5": Vehicle(72.6, 11),
+    "Kia EV6": Vehicle(77.4, 11),
+    "VW ID.4": Vehicle(82, 11),
+    "BMW i3": Vehicle(42.2, 7.4),
+    "BMW i4": Vehicle(80.7, 11),
+    "BMW iX": Vehicle(105, 11),
+    "Porsche Taycan": Vehicle(93.4, 11),
+    "Rivian R1T": Vehicle(135, 11),
+    "Mercedes EQS": Vehicle(108, 11),
+    }
+
+
+# Display Vehicle Information & the Energy Needed for Charging
+for i in vehicles:
+    v = vehicles[i]
+    print(f"{i}: Battery Size = {v.battery_size_kWh} kWh, Max Charging Rate = {v.max_charging_rate_kW} kW, Start SoC = {v.start_soc:.0f}, Target SoC = {v.target_soc:.0f}, Energy Needed = {v.energy_needed_kWh:.2f} kWh")
+# Example Output:
+# Tesla Model 3: Battery Size = 75 kWh, Max Charging Rate = 11 kW, Start SoC = 64, Target SoC = 95, Energy Needed = 22.50 kWh
